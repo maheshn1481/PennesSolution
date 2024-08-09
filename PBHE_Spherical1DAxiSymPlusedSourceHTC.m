@@ -1,5 +1,5 @@
 tic
-clear; close all; clc;
+clear; close all; %clc;
 %%% Solves the Pennes BioHeat Equation in Spherical Coordinates %%%
 %%% The model is 1-Dimensional and Axisymmetric %%%
 %%% The initial conditions are T(0,r) = 37 °C %%%
@@ -18,30 +18,33 @@ N = length(r);            % [-] Number of spatial nodes
 t_loc = r<=RT;            % [-] Tumor r indices
 
 %%% Time discretization: Implicit method is employed
-dt = 5;             % Time step [s]
 t_end = 180;       % End time [s]
-TS = t_end/dt;     % Number of steps
+step_dt = 3;             % Step_width of discrete H action [s]
+Ntime = t_end/step_dt;     % Number of H action steps
+dt = 1; % Simulations time-step
+t = 0:dt:t_end;
+TS = length(t);
 
 %%% Magnetic Field Parameters
 Hmin = 7957;
 Hmax = 39788;
+% Hmin = 10000;
+% Hmax = 10000;
 H_range = Hmin:Hmin:Hmax;
 
 % Generate random indices
-indices = randi(length(H_range), 1, TS);
+indices = randi(length(H_range), 1, Ntime);
 
 % Create the random array
-H_array = H_range(indices);
-for i = 1: length(H_array)
+Htime = H_range(indices);
+for i = 1: length(Htime)
     % Calculate the starting index for the current iteration
-    startIndex = (i - 1) * dt + 1
+    startIndex = (i - 1) * (step_dt)/dt + 1;
     
     % Calculate the ending index for the current iteration
-    endIndex = min(startIndex + dt - 1, t_end)
-    HVector(startIndex:endIndex) = H_array(i);   
+    endIndex = min(startIndex + (step_dt)/dt - 1, TS-1);
+    HVector(startIndex:endIndex) = Htime(i);   
 end
-% Display the resulting vector
-disp(HVector);
 
 
 % H = 10000;  % [A/m] Magnetic Field Amplitude H = 10 kA/m
@@ -111,9 +114,6 @@ tauN = sqrt(pi)*tau0*exp(gamma)/(2*sqrt(gamma));    % [s] Neel Relaxation Time o
 tauE = tauB*tauN/(tauB+tauN);                       % [s] Effective Relaxation Time of MNP
 
 %% Implicit Finite Difference Scheme
-sim_dt = 1;
-t = 0:sim_dt:t_end;
-TS = length(t)
 T = zeros(N, TS);
 T(:,1) = T_b; % Initial Condition
 %%% Coefficient Matrix Three-Diagonal Generation
@@ -159,13 +159,13 @@ for n = 2:TS
 end
 %%
 T_sum_time = sum(T,2); % Summation of Temperature over all Times at each r location
-gain = trapz(r,T_sum_time); % Integration of Temperature over the space
+gain = trapz(r,T_sum_time) % Integration of Temperature over the space
 %% Plot the results
 q_mnp_t = [q_mnp_time(:,1),q_mnp_time];
 [RR,TT] = meshgrid(r,t);
-figure('Position', [50, 50, 600, 600])
+figure('Position', [40, 40, 800, 600])
 subplot(2,2,1)
-plot(HVector)
+plot((1:length(HVector))*dt,HVector)
 xlim([0,t_end])
 xticks([0:t_end/4:t_end]);
 xlabel('Time [s]')
@@ -192,14 +192,14 @@ plot(t,T(plot_rad_idx,:), 'LineWidth',2)
 xlabel('Time, t [s]');
 ylabel('Temperature, T [°C]');
 xlim([0,t_end])
-xticks(0:30:t_end);
+xticks([0:t_end/4:t_end]);
 legend(legend_String, Location='best')
 title('Temperature Elevations');
 grid on;
 
 subplot(2,2,4)
-plot_time = [0,60,120,t_end];
-legend_String = string(plot_time)+[" s"," s"," s"," s"];
+plot_time = [60,120,t_end];
+legend_String = string(plot_time)+[" s"," s"," s"];
 plot_ind = (plot_time/dt)+1;
 plot(r,T(:,plot_ind),'LineWidth',2)
 hold on
